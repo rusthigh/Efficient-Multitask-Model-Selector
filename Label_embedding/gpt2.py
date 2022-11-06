@@ -1,15 +1,13 @@
-import torch
-from transformers import CLIPModel, CLIPProcessor
-import numpy as np
-# 指定设备
-device = "cuda" if torch.cuda.is_available() else "cpu"
-# 加载模型
-# model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(device)
-# processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
-model = CLIPModel.from_pretrained("laion/CLIP-ViT-g-14-laion2B-s12B-b42K").to(device)
-processor = CLIPProcessor.from_pretrained("laion/CLIP-ViT-g-14-laion2B-s12B-b42K")
 
-    
+from transformers import GPT2Tokenizer, GPT2Model
+import torch
+import numpy as np
+# device = "cuda" if torch.cuda.is_available() else "cpu"
+tokenizer = GPT2Tokenizer.from_pretrained('gpt2-medium')
+# tokenizer.add_special_tokens({'pad_token': '[PAD]'})
+tokenizer.pad_token = tokenizer.eos_token
+model = GPT2Model.from_pretrained('gpt2-medium')
+# text = "Replace me by any text you'd like."
 datasets_hub = ['dtd','aircraft','caltech101','cars','cifar10','cifar100','flowers','food','pets','sun397','voc2007']
 
 for dataset in datasets_hub:
@@ -41,11 +39,16 @@ for dataset in datasets_hub:
         print(' no dataset ')
 
     print(len(text), dataset)
-    inputs = processor(text, padding=True, return_tensors="pt").to(device)
-    # 将输入馈送到模型中以获得嵌入向量
+    encoded_input = tokenizer(text, return_tensors='pt',padding=True, truncation=True)
     with torch.no_grad():
-        embeddings = model.get_text_features(**inputs)
-        # embeddings = embeddings / embeddings.norm(dim=-1, keepdim=True)  # 归一化嵌入向量
+    # 使用模型进行编码
+        outputs = model(**encoded_input)
 
-    print(embeddings.shape)
-    np.save('/data/feature_bnorm_classification_1024/' + dataset + '_clip_1024_nonorm.npy',embeddings.cpu())
+    # 获取最后一层的hidden states
+    last_hidden_states = outputs.last_hidden_state
+    # print(last_hidden_states.shape,'last_hidden_states.shape')
+    feature = last_hidden_states.mean(dim = 1)
+    # 输出编码结果
+    # print(feature[0])
+    # print(feature.shape)
+    np.save(dataset + '_nonorm_gpt2.npy',feature.cpu())
