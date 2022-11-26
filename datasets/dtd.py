@@ -41,4 +41,20 @@ class DTD(data.Dataset):
         self.target_transform = target_transform
         self.partition = '1'
 
-        filename = [os.path.j
+        filename = [os.path.join(root, 'labels', split + self.partition + '.txt')]
+        # print(filename)
+        self.images, self.labels = make_dataset(filename, root, class_to_idx)
+        assert (len(self.images) == len(self.labels))
+
+    def __getitem__(self, index):
+        _img = Image.open(self.images[index]).convert('RGB')
+        _label = self.labels[index]
+        if self.transform is not None:
+            _img = self.transform(_img)
+        if self.target_transform is not None:
+            _label = self.target_transform(_label)
+
+        return _img, _label
+
+    def __len__(self):
+        return len(self.images)
